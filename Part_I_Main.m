@@ -77,20 +77,20 @@ for k = 1:N
 
     % Build H at time t_k
     for j = 1:12
-        H(3*j-3+(1:3),:) = Cbar(t_k,j);
-        M(3*j-3+(1:3), :) = Dbar;
+        H(3*j-3+(1:3),:,k) = Cbar(t_k,j);
+        M(3*j-3+(1:3),:,k) = Dbar;
         % thetaik(j,k) = thetai(t_k,j); 
     end
 
     % Linearized measurement at time t_k
-    delta_yk(:,k) = H*delta_xk(:,k);
+    delta_yk(:,k) = H(:,:,k)*delta_xk(:,k);
     yk(:,k) = output_var_nom(:,k) + delta_yk(:,k);
 
     % Propagate perturbation to next step (except at the last time)
     if k < N
-        F = eye(4) + delta_t.*Abar(t_k);
-        G = delta_t.*Bbar;                  
-        delta_xk(:,k+1) = F*delta_xk(:,k);
+        F(:,:,k) = eye(4) + delta_t.*Abar(t_k);
+        G(:,:,k) = delta_t.*Bbar;                  
+        delta_xk(:,k+1) = F(:,:,k)*delta_xk(:,k);
     end
 
     % Determine visibility off of full nonlinear visibility
@@ -101,6 +101,14 @@ end
 
 % Reconstruct the linearized full state
 state_lin = state_nom + delta_xk.';
+
+% Load in Data Logs and Q/R
+data = load('orbitdeterm_finalproj_KFdata.mat');
+Q = data.Qtrue;
+R = data.Rtrue;
+tvec_datalog = data.tvec;
+ydatalog = data.ydata;
+
 
 %% Plots
 figure();

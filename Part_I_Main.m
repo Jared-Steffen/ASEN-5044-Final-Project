@@ -28,8 +28,30 @@ options = odeset('RelTol',1e-6,'AbsTol',1e-9);
 [output_var,station_vis] = MeasuredOutput(t,state,RE,wE,true);
 [output_var_nom,~] = MeasuredOutput(t,state_nom,RE,wE,false);
 
-%% CT Dynamics
+% Convert into cell array - filter nominal measurements to match NL idxs
+N = length(t);
+ycell_nom = cell(N,1);
+ycell_pert = cell(N,1);
+station_vis_cell = cell(N,1);
+for k = 1:N-1
+    yrowsKeep = ~any(isnan(output_var(:,k+1)),2); % rows that contain NO NaNs
+    stationrowsKeep = ~any(isnan(station_vis(:,k+1)),2); % rows that contain NO NaNs
+    y1 = output_var_nom(yrowsKeep,k+1);
+    y2 = output_var(yrowsKeep,k+1);
+    station = station_vis(stationrowsKeep,k+1);
+    ycell_nom{k+1} = y1;
+    ycell_pert{k+1} = y2;
+    station_vis_cell{k+1} = station;
+end
 
+y_pert = ycell_pert;
+y_nom = ycell_nom;
+station_vis = station_vis_cell;
+
+% Concatanate Outputs/Stations
+NLpert_outputs = [y_nom station_vis];
+
+%% CT Dynamics
 Abar = @(t) [0 1 0 0
         -w^2*(1-3*cos(w*t)^2) 0 (3/2)*w^2*sin(2*w*t) 0
         0 0 0 1
@@ -68,40 +90,43 @@ delta_Ynom(t,i)/rhonom(t,i); % row 2 col 4
 Dbar = zeros(3,2);
 
 %% CT -> DT and Simulate Perturbation Dynamics
-N = length(tspan);
+% Initialize
 delta_xk = zeros(4, N);
 delta_xk(:,1) = perturb_x0;
+delta_yk = cell(N,1);
+Fk = zeros(4,4,N);
+Hk = cell(N,1); 
+yk = cell(N,1);
 
-for k = 1:N
-    t_k = tspan(k);
+for k = 1:N-1
 
     % Build H at time t_k
-    for j = 1:12
-        H(3*j-3+(1:3),:,k) = Cbar(t_k,j);
-        M(3*j-3+(1:3),:,k) = Dbar;
-        % thetaik(j,k) = thetai(t_k,j); 
+    num_vis = station_vis{k+1};
+    H = zeros(3*length(num_vis),4);
+    for i = 1:length(num_vis)
+        H(3*i-3+(1:3),:) = Cbar(tspan(k+1),num_vis(i));
     end
-
-    % Linearized measurement at time t_k
-    delta_yk(:,k) = H(:,:,k)*delta_xk(:,k);
-    yk(:,k) = output_var_nom(:,k) + delta_yk(:,k);
+    Hk{k+1} = H;
 
     % Propagate perturbation to next step (except at the last time)
     if k < N
-        F(:,:,k) = eye(4) + delta_t.*Abar(t_k);
-        G(:,:,k) = delta_t.*Bbar;                  
-        delta_xk(:,k+1) = F(:,:,k)*delta_xk(:,k);
+        Fk(:,:,k) = eye(4) + delta_t.*Abar(tspan(k));
+        G = delta_t.*Bbar;                  
+        delta_xk(:,k+1) = Fk(:,:,k)*delta_xk(:,k);
     end
 
-    % Determine visibility off of full nonlinear visibility
-    not_vis = isnan(output_var(:,k));
-    yk(not_vis, k) = NaN;
+    % Linearized measurement at time t_k
+    delta_yk{k+1} = Hk{k+1}*delta_xk(:,k+1);
+    yk{k+1} = y_nom{k+1} + delta_yk{k+1};
 end
-
 
 % Reconstruct the linearized full state
 state_lin = state_nom + delta_xk.';
 
+% Concatanate Outputs/Stations
+ouput_data_lin = [yk,station_vis];
+
+%% Load in Data Logs and Define Inputs
 % Load in Data Logs and Q/R
 data = load('orbitdeterm_finalproj_KFdata.mat');
 Q = data.Qtrue;
@@ -109,127 +134,47 @@ R = data.Rtrue;
 tvec_datalog = data.tvec;
 ydatalog = data.ydata;
 
+% Inputs
+u_nom = zeros(2,length(tspan));
+u = zeros(2,length(tspan));
+
+%% Noise and Covariance
+% Process Noise Matrix
+Gamma = Bbar; % w1,2 has same mapping as u1,2
+Omegabar = delta_t.*Gamma;
+
+% Generate Noisy Measurements;
+y_pert_noise = cell(N,1);
+for k = 1:N-1
+    K = length(y_pert{k+1});
+    Sv = chol(kron(eye(K/3),R),'lower');
+    qk = randn(K,1);
+    y_pert_noise{k+1} = y_pert{k+1} + Sv*qk;
+end
+
+% Initialize Covariance
+Pp0 = diag([10,0.1,10,0.1]);
+
+%% LKF
+[x_LKF,y_LKF,Ppkp1_LKF] = LKF...
+    (Fk,G,Hk,Q,R,Omegabar,perturb_x0,Pp0,state,u_nom,u,y_nom,y_pert_noise);
 
 %% Plots
-figure();
-subplot(411)
-plot(t,state(:,1),'LineWidth',2)
-grid on; grid minor
-xlabel('Time [s]')
-ylabel('X Position [km]')
-subplot(412)
-plot(t,state(:,2),'LineWidth',2)
-grid on; grid minor
-xlabel('Time [s]')
-ylabel('Y Position [km]')
-subplot(413)
-plot(t,state(:,3),'LineWidth',2)
-grid on; grid minor
-xlabel('Time [s]')
-ylabel('X Velocity [km/s]')
-subplot(414)
-plot(t,state(:,4),'LineWidth',2)
-grid on; grid minor
-xlabel('Time [s]')
-ylabel('Y Velocity [km/s]')
-sgtitle('Nonlinear Dynamics')
+% Dynamics Labels
+Full_Dynamics_Labels = {'$X$ [km]','$Y$ [km]','$\dot{X}$ [km/s]',...
+    '$\dot{Y}$ [km/s]'};
+Perturbation_Dynamics_Labels = {'$\delta X$ [km]','$\delta Y$ [km]',...
+    '$\delta\dot{X}$ [km/s]','$\delta\dot{Y}$ [km/s]'};
 
-figure();
-colororder('gem12')
-subplot(411)
-plot(t,output_var(1:3:end,:),'o','LineWidth',2)
-grid on; grid minor
-xlabel('Time [s]')
-ylabel('$\rho_{i}(t)$ [km]','Interpreter','latex')
-subplot(412)
-plot(t,output_var(2:3:end,:),'o','LineWidth',2)
-grid on; grid minor
-xlabel('Time [s]')
-ylabel('$\dot{\rho_{i}}(t)$ [km/s]','Interpreter','latex')
-subplot(413)
-plot(t,output_var(3:3:end,:),'o','LineWidth',2)
-grid on; grid minor
-xlabel('Time [s]')
-ylabel('$\phi_{i}(t)$ [radians]','Interpreter','latex')
-subplot(414)
-plot(t,station_vis,'o','LineWidth',2)
-grid on; grid minor
-xlabel('Time [s]')
-ylabel('Station ID Number')
-sgtitle('Nonlinear Model Ouputs')
+% NL System
+Plot_Dynamics(t,state,Full_Dynamics_Labels,'Nonlinear Dynamics')
+% Plot_Outputs(t,output_var,station_vis_nom,'Nonlinear Model Ouputs')
 
-figure();
-subplot(411)
-plot(tspan,delta_xk(1,:),'LineWidth',2)
-grid on; grid minor
-xlabel('Time [s]')
-ylabel('$\delta Y$ [km]','Interpreter','latex')
-subplot(412)
-plot(tspan,delta_xk(2,:),'LineWidth',2)
-grid on; grid minor
-xlabel('Time [s]')
-ylabel('$\delta X$ [km]','Interpreter','latex')
-subplot(413)
-plot(tspan,delta_xk(3,:),'LineWidth',2)
-grid on; grid minor
-xlabel('Time [s]')
-ylabel('$\delta\dot{X}$ [km/s]','Interpreter','latex')
-subplot(414)
-plot(tspan,delta_xk(4,:),'LineWidth',2)
-grid on; grid minor
-xlabel('Time [s]')
-ylabel('$\delta\dot{Y}$ [km/s]','Interpreter','latex')
-sgtitle('Linearized Pertubation Dynamics')
+% Linearized System
+Plot_Dynamics(t,delta_xk',Perturbation_Dynamics_Labels,...
+    'Linearized Perturbation Dynamics')
+Plot_Dynamics(t,state_lin,Full_Dynamics_Labels,'Linearized Full Dynamics')
+% Plot_Outputs(t,yk,station_vis_nom,'Linearized Model Ouputs')
 
-figure();
-subplot(411)
-plot(t,state_lin(:,1),'LineWidth',2)
-grid on; grid minor
-xlabel('Time [s]')
-ylabel('X Position [km]')
-subplot(412)
-plot(t,state_lin(:,2),'LineWidth',2)
-grid on; grid minor
-xlabel('Time [s]')
-ylabel('Y Position [km]')
-subplot(413)
-plot(t,state_lin(:,3),'LineWidth',2)
-grid on; grid minor
-xlabel('Time [s]')
-ylabel('X Velocity [km/s]')
-subplot(414)
-plot(t,state_lin(:,4),'LineWidth',2)
-grid on; grid minor
-xlabel('Time [s]')
-ylabel('Y Velocity [km/s]')
-sgtitle('Linearized Full Dynamics')
-
-figure();
-colororder('gem12')
-subplot(411)
-plot(t,yk(1:3:end,:),'o','LineWidth',2)
-grid on; grid minor
-xlabel('Time [s]')
-ylabel('$\rho_{i}(t)$ [km]','Interpreter','latex')
-subplot(412)
-plot(t,yk(2:3:end,:),'o','LineWidth',2)
-grid on; grid minor
-xlabel('Time [s]')
-ylabel('$\dot{\rho_{i}}(t)$ [km/s]','Interpreter','latex')
-subplot(413)
-plot(t,yk(3:3:end,:),'o','LineWidth',2)
-grid on; grid minor
-xlabel('Time [s]')
-ylabel('$\phi_{i}(t)$ [radians]','Interpreter','latex')
-subplot(414)
-plot(t,station_vis,'o','LineWidth',2)
-grid on; grid minor
-xlabel('Time [s]')
-ylabel('Station ID Number')
-sgtitle('Linearized Model Ouputs')
-
-% figure();
-% plot(t(1:end-1),wrapToPi(yk(30,:)-thetaik(:,9)'),'o')
-% hold on
-% yline(pi/2)
-% yline(-pi/2)
+% LKF Results
+Plot_Dynamics(t,x_LKF',Full_Dynamics_Labels,'LKF Estimated States')

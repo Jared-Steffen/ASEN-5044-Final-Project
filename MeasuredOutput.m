@@ -2,6 +2,7 @@ function [output_var,station_vis] = MeasuredOutput(t,state,RE,wE,NaN_bool)
     % Goal: Output measured outputs (rho, rho_dot, phi) for each visible station
 
     % Extract state info
+    N = length(t);
     x_t = state(:,1); % km
     x_dot_t = state(:,2); % km/s
     y_t = state(:,3); % km
@@ -23,17 +24,17 @@ function [output_var,station_vis] = MeasuredOutput(t,state,RE,wE,NaN_bool)
             ((y_t-Ys_it).*(y_dot_t-Ysdot_it)))./rho_it(:,i);
         station_vis(:,i) = i.*ones(length(rho_it(:,i)),1);
         if NaN_bool == true
-            for k = 1:length(t)
-                if abs(wrapToPi(phi_it(k,i) - theta_it(k))) < pi/2
-                    phi_it(k,i) = phi_it(k,i);
-                    rho_it(k,i) = rho_it(k,i);
-                    rhodot_it(k,i) = rhodot_it(k,i);
-                    station_vis(k,i) = station_vis(k,i);
+            for k = 1:N-1
+                if abs(wrapToPi(phi_it(k+1,i) - theta_it(k+1))) < pi/2
+                    phi_it(k+1,i) = phi_it(k+1,i);
+                    rho_it(k+1,i) = rho_it(k+1,i);
+                    rhodot_it(k+1,i) = rhodot_it(k+1,i);
+                    station_vis(k+1,i) = station_vis(k+1,i);
                 else
-                    phi_it(k,i) = NaN;
-                    rho_it(k,i) = NaN;
-                    rhodot_it(k,i) = NaN;
-                    station_vis(k,i) = NaN;
+                    phi_it(k+1,i) = NaN;
+                    rho_it(k+1,i) = NaN;
+                    rhodot_it(k+1,i) = NaN;
+                    station_vis(k+1,i) = NaN;
                 end
             end
         else
@@ -43,8 +44,10 @@ function [output_var,station_vis] = MeasuredOutput(t,state,RE,wE,NaN_bool)
             station_vis(:,i) = station_vis(:,i);
         end
         yi(3*i-3 + (1:3),:) = [rho_it(:,i)';rhodot_it(:,i)';phi_it(:,i)'];
-
     end
-
+    station_vis = station_vis';
+    station_vis(:,1) = NaN;
+    yi(:,1) = NaN;
     output_var = yi;
+
 end

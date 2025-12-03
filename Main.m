@@ -49,7 +49,7 @@ y_nom = ycell_nom;
 station_vis = station_vis_cell;
 
 % Concatanate Outputs/Stations
-NLpert_outputs = [y_nom station_vis];
+NL_outputs = [y_nom station_vis];
 
 %% CT Dynamics
 Abar = @(t) [0 1 0 0
@@ -124,7 +124,7 @@ end
 state_lin = state_nom + delta_xk.';
 
 % Concatanate Outputs/Stations
-ouput_data_lin = [yk,station_vis];
+L_outputs = [yk,station_vis];
 
 %% Load in Data Logs and Define Inputs
 % Load in Data Logs and Q/R
@@ -168,13 +168,13 @@ Perturbation_Dynamics_Labels = {'$\delta X$ [km]','$\delta Y$ [km]',...
 
 % NL System
 Plot_Dynamics(t,state,Full_Dynamics_Labels,'Nonlinear Dynamics')
-% Plot_Outputs(t,output_var,station_vis_nom,'Nonlinear Model Ouputs')
+Plot_Outputs(t,NL_outputs,'Nonlinear Model Outputs')
 
 % Linearized System
 Plot_Dynamics(t,delta_xk',Perturbation_Dynamics_Labels,...
     'Linearized Perturbation Dynamics')
 Plot_Dynamics(t,state_lin,Full_Dynamics_Labels,'Linearized Full Dynamics')
-% Plot_Outputs(t,yk,station_vis_nom,'Linearized Model Ouputs')
+Plot_Outputs(t,L_outputs,'Linearized Model Ouputs')
 
 % LKF Results
 Plot_Dynamics(t,x_LKF',Full_Dynamics_Labels,'LKF Estimated States')

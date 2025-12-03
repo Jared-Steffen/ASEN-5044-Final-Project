@@ -11,9 +11,9 @@ wE = (2*pi)/86400; % rad/s
 w = sqrt(mu/r0^3);
 
 % ICs
-var0 = [r0 0 0 Ydot0]';
-perturb_x0 = [0 0.075 0 -0.021]';
-var = var0 + perturb_x0;
+nom_var0 = [r0 0 0 Ydot0]';
+delta_x0 = [0 0.075 0 -0.021]';
+pert_var0 = nom_var0 + delta_x0;
 
 % Simulation time
 delta_t = 10; %s
@@ -21,8 +21,8 @@ tspan = 0:delta_t:14000; % s
 
 % ode45 call
 options = odeset('RelTol',1e-6,'AbsTol',1e-9);
-[t,state] = ode45(@(tspan,var) OrbitEOM(tspan,var,mu),tspan,var,options);
-[~,state_nom] = ode45(@(tspan,var0) OrbitEOM(tspan,var0,mu),tspan,var0,options);
+[t,state] = ode45(@(tspan,var) OrbitEOM(tspan,var,mu),tspan,pert_var0,options);
+[~,state_nom] = ode45(@(tspan,var0) OrbitEOM(tspan,var0,mu),tspan,nom_var0,options);
 
 % Get outputs
 [output_var,station_vis] = MeasuredOutput(t,state,RE,wE,true);
@@ -92,7 +92,7 @@ Dbar = zeros(3,2);
 %% CT -> DT and Simulate Perturbation Dynamics
 % Initialize
 delta_xk = zeros(4, N);
-delta_xk(:,1) = perturb_x0;
+delta_xk(:,1) = delta_x0;
 delta_yk = cell(N,1);
 Fk = zeros(4,4,N);
 Hk = cell(N,1); 
@@ -157,7 +157,9 @@ Pp0 = diag([10,0.1,10,0.1]);
 
 %% LKF
 [x_LKF,y_LKF,Ppkp1_LKF] = LKF...
-    (Fk,G,Hk,Q,R,Omegabar,perturb_x0,Pp0,state,u_nom,u,y_nom,y_pert_noise);
+    (Fk,G,Hk,Q,R,Omegabar,delta_x0,Pp0,state,u_nom,u,y_nom,y_pert_noise);
+
+LKF_outputs = [y_LKF station_vis];
 
 %% Plots
 % Dynamics Labels
@@ -177,4 +179,4 @@ Plot_Dynamics(t,state_lin,Full_Dynamics_Labels,'Linearized Full Dynamics')
 Plot_Outputs(t,L_outputs,'Linearized Model Ouputs')
 
 % LKF Results
-Plot_Dynamics(t,x_LKF',Full_Dynamics_Labels,'LKF Estimated States')
+Plot_Outputs(t,LKF_outputs,'LKF Ouputs')

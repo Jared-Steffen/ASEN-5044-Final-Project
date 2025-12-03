@@ -1,4 +1,6 @@
 function Plot_Outputs(t,outputs_cell,subplot_title)
+% NOTE: outputs_cell MUST be a cell array with the first column containing
+% the output data and the second column containing the station IDs
     
     % Extract outputs and station visibility cell arrays
     outputs_cell_array = outputs_cell(:,1);

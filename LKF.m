@@ -1,4 +1,5 @@
-function [x_full,y_full,Ppkp1] = LKF(F,G,H,Q,R,Omega,delta_x0,Pp0,x_nom,u_nom,u,y_nom,y)
+function [x_full,y_full,Ppkp1] = LKF...
+    (F,G,H,Q,R,Omega,delta_x0,Pp0,x_nom,u_nom,u,y_nom,y_noisy)
     % Initialize
     N = size(F,3);
     delta_xpkp1 = zeros(4,N);
@@ -18,13 +19,13 @@ function [x_full,y_full,Ppkp1] = LKF(F,G,H,Q,R,Omega,delta_x0,Pp0,x_nom,u_nom,u,
         K = height(H{k+1})/3;
         Rk = kron(eye(K),R);
         Kkp1 = Pmkp1*H{k+1}'*inv(H{k+1}*Pmkp1*H{k+1}'+Rk);
-        delta_ykp1{k+1} = y{k+1} - y_nom{k+1};
+        delta_ykp1{k+1} = y_noisy{k+1} - y_nom{k+1};
         Ppkp1(:,:,k+1) = (eye(4)-Kkp1*H{k+1})*Pmkp1;
         delta_xpkp1(:,k+1) = delta_xmkp1+Kkp1*(delta_ykp1{k+1}-H{k+1}*delta_xmkp1);
 
 
         % Add Outputs
-        y_full{k+1} = y_nom{k+1} + delta_ykp1{k+1};
+        y_full{k+1} = y_nom{k+1} + H{k+1} * delta_xpkp1(:,k+1);
     end
 
     % Add to nominal state

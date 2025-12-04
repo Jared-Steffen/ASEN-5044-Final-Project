@@ -21,12 +21,12 @@ tspan = 0:delta_t:14000; % s
 
 % ode45 call
 options = odeset('RelTol',1e-6,'AbsTol',1e-9);
-[t,state] = ode45(@(tspan,var) OrbitEOM(tspan,var,mu),tspan,pert_var0,options);
-[~,state_nom] = ode45(@(tspan,var0) OrbitEOM(tspan,var0,mu),tspan,nom_var0,options);
+[t,x_pert] = ode45(@(tspan,var) OrbitEOM(tspan,var,mu),tspan,pert_var0,options);
+[~,x_nom] = ode45(@(tspan,var0) OrbitEOM(tspan,var0,mu),tspan,nom_var0,options);
 
 % Get outputs
-[output_var,station_vis] = MeasuredOutput(t,state,RE,wE,true);
-[output_var_nom,~] = MeasuredOutput(t,state_nom,RE,wE,false);
+[output_var,station_vis] = MeasuredOutput(t,x_pert,RE,wE,true);
+[output_var_nom,~] = MeasuredOutput(t,x_nom,RE,wE,false);
 
 % Convert into cell array - filter nominal measurements to match NL idxs
 N = length(t);
@@ -121,7 +121,7 @@ for k = 1:N-1
 end
 
 % Reconstruct the linearized full state
-state_lin = state_nom + delta_xk.';
+state_lin = x_nom + delta_xk.';
 
 % Concatanate Outputs/Stations
 L_outputs = [yk,station_vis];
@@ -132,7 +132,21 @@ data = load('orbitdeterm_finalproj_KFdata.mat');
 Q = data.Qtrue;
 R = data.Rtrue;
 tvec_datalog = data.tvec;
-ydatalog = data.ydata;
+ydatalog = data.ydata';
+ydatalog(1) = cell(1,1);
+
+% Modify ydatalog for plotting fxn
+ydatalog_mod = cell(N,1);
+station_vis_datalog = cell(N,1);
+for k = 1:N
+    current_y = cell2mat(ydatalog(k));
+    if isempty(current_y)
+        continue
+    else
+        station_vis_datalog{k} = current_y(end,:)';
+        ydatalog_mod{k} = reshape(current_y(1:end-1)',[],1);
+    end
+end
 
 % Inputs
 u_nom = zeros(2,length(tspan));
@@ -156,11 +170,11 @@ end
 Pp0 = diag([10,0.1,10,0.1]);
 
 %% LKF
-[x_LKF,y_LKF,Ppkp1_LKF] = LKF...
-    (Fk,G,Hk,Q,R,Omegabar,delta_x0,Pp0,state,u_nom,u,y_nom,y_pert_noise);
+[x_LKF,y_LKF,Pmkp1,Ppkp1,innov] = LKF...
+    (Fk,G,Hk,Q,R,Omegabar,delta_x0,Pp0,x_nom,u_nom,u,y_nom,y_pert_noise);
 
 LKF_outputs = [y_LKF station_vis];
-
+LKF_state_err = x_LKF-x_pert;
 %% Plots
 % Dynamics Labels
 Full_Dynamics_Labels = {'$X$ [km]','$Y$ [km]','$\dot{X}$ [km/s]',...
@@ -169,7 +183,7 @@ Perturbation_Dynamics_Labels = {'$\delta X$ [km]','$\delta Y$ [km]',...
     '$\delta\dot{X}$ [km/s]','$\delta\dot{Y}$ [km/s]'};
 
 % NL System
-Plot_Dynamics(t,state,Full_Dynamics_Labels,'Nonlinear Dynamics')
+Plot_Dynamics(t,x_pert,Full_Dynamics_Labels,'Nonlinear Dynamics')
 Plot_Outputs(t,NL_outputs,'Nonlinear Model Outputs')
 
 % Linearized System

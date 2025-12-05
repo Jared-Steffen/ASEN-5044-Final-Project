@@ -31,7 +31,7 @@ function Plot_Outputs(t,outputs_cell,subplot_title)
     end  
 
     figure();
-    colororder('gem12')
+    colororder('default')
     subplot(411)
     plot(t,outputs(1:3:end,:),'o','LineWidth',2)
     grid on; grid minor

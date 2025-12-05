@@ -161,6 +161,11 @@ Pp0 = diag([10,0.1,10,0.1]);
 
 LKF_outputs = [y_LKF station_vis];
 
+%% EKF
+[x_EKF, P_EKF, y_EKF] = EKF(Q, R, y_pert_noise, t, mu, RE, wE, nom_var0, Pp0, station_vis);
+
+EKF_outputs = [y_EKF station_vis];
+
 %% Plots
 % Dynamics Labels
 Full_Dynamics_Labels = {'$X$ [km]','$Y$ [km]','$\dot{X}$ [km/s]',...
@@ -180,3 +185,6 @@ Plot_Outputs(t,L_outputs,'Linearized Model Ouputs')
 
 % LKF Results
 Plot_Outputs(t,LKF_outputs,'LKF Ouputs')
+
+%EKF Results
+Plot_Outputs(t,EKF_outputs,'EKF Ouputs')

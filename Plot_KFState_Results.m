@@ -1,5 +1,8 @@
 function Plot_KFState_Results(t,state,estimated_state,state_errors,Ppkp1,...
     subplot_title1,subplot_title2,y_labels1,y_labels2)
+
+    % subplot_title1 and y_labels1 are for the state estimate
+    % subplot_title2 and y_labels2 are for the estimate error
     
     % Extract Variances
     X_var = Ppkp1(1,1,:);

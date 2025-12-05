@@ -17,12 +17,16 @@ pert_var0 = nom_var0 + delta_x0;
 
 % Simulation time
 delta_t = 10; %s
+% T = (2*pi)/(sqrt(mu/r0^3));
+% tspan = 0:delta_t:T; % s
 tspan = 0:delta_t:14000; % s
 
-% ode45 call
+% ode45 call 
 options = odeset('RelTol',1e-6,'AbsTol',1e-9);
-[t,x_pert] = ode45(@(tspan,var) OrbitEOM(tspan,var,mu),tspan,pert_var0,options);
 [~,x_nom] = ode45(@(tspan,var0) OrbitEOM(tspan,var0,mu),tspan,nom_var0,options);
+
+% ode45 call - pert 
+[t,x_pert] = ode45(@(tspan,var) OrbitEOM(tspan,var,mu),tspan,pert_var0,options);
 
 % Get outputs
 [output_var,station_vis] = MeasuredOutput(t,x_pert,RE,wE,true);
@@ -129,7 +133,7 @@ L_outputs = [yk,station_vis];
 %% Load in Data Logs and Define Inputs
 % Load in Data Logs and Q/R
 data = load('orbitdeterm_finalproj_KFdata.mat');
-Q = data.Qtrue;
+Qtrue = data.Qtrue;
 R = data.Rtrue;
 tvec_datalog = data.tvec;
 ydatalog = data.ydata';
@@ -152,6 +156,9 @@ end
 u_nom = zeros(2,length(tspan));
 u = zeros(2,length(tspan));
 
+%% Tuning Knob
+Q = 10.*Qtrue;
+
 %% Noise and Covariance
 % Process Noise Matrix
 Gamma = Bbar; % w1,2 has same mapping as u1,2
@@ -166,21 +173,40 @@ for k = 1:N-1
     y_pert_noise{k+1} = y_pert{k+1} + Sv*qk;
 end
 
+noisy_ouputs = [y_pert_noise station_vis];
+
+% ode45 call - pert w/ noise
+x_true_pert = pert_var0;
+x_pert_noisy = zeros(N,4);
+x_pert_noisy(1,:) = pert_var0';
+for k = 1:N-1
+    current_tspan = [tspan(k) tspan(k+1)];
+    [~,x_pert_k] = ode45(@(current_tspan,pert_var0)...
+        OrbitEOM(current_tspan,pert_var0,mu),current_tspan,x_true_pert,options);
+    xtrue_kp1 = x_pert_k(end,:); 
+    w_k = chol(Q,"lower")*randn(2,1);
+    x_true_pert = xtrue_kp1' + Omegabar*w_k;
+    x_pert_noisy(k+1,:) = x_true_pert;
+end
+
 % Initialize Covariance
-Pp0 = diag([10,0.1,10,0.1]);
+Pp0 = diag([100,1,100,1]);
 
 %% LKF
-[x_LKF,y_LKF,Pmkp1,Ppkp1,innov] = LKF...
+[x_LKF,y_LKF,Pmkp1_LKF,Ppkp1_LKF,innov_LKF,delta_x_LKF] = LKF...
     (Fk,G,Hk,Q,R,Omegabar,delta_x0,Pp0,x_nom,u_nom,u,y_nom,y_pert_noise);
 
 LKF_outputs = [y_LKF station_vis];
-LKF_state_err = x_LKF-x_pert;
+LKF_state_err = x_LKF-x_pert_noisy;
+
 %% Plots
 % Dynamics Labels
-Full_Dynamics_Labels = {'$X$ [km]','$Y$ [km]','$\dot{X}$ [km/s]',...
+Full_Dynamics_Labels = {'$X$ [km]','$\dot{X}$ [km/s]','$Y$ [km]',...
     '$\dot{Y}$ [km/s]'};
-Perturbation_Dynamics_Labels = {'$\delta X$ [km]','$\delta Y$ [km]',...
-    '$\delta\dot{X}$ [km/s]','$\delta\dot{Y}$ [km/s]'};
+Perturbation_Dynamics_Labels = {'$\delta X$ [km]',...
+    '$\delta\dot{X}$ [km/s]','$\delta Y$ [km]','$\delta\dot{Y}$ [km/s]'};
+Error_Dynamics_Labels = {'$X$ Error [km]','$\dot{X}$ Error [km/s]',...
+    '$Y$ Error [km]','$\dot{Y}$ Error[km/s]'};
 
 % NL System
 Plot_Dynamics(t,x_pert,Full_Dynamics_Labels,'Nonlinear Dynamics')
@@ -190,7 +216,11 @@ Plot_Outputs(t,NL_outputs,'Nonlinear Model Outputs')
 Plot_Dynamics(t,delta_xk',Perturbation_Dynamics_Labels,...
     'Linearized Perturbation Dynamics')
 Plot_Dynamics(t,state_lin,Full_Dynamics_Labels,'Linearized Full Dynamics')
-Plot_Outputs(t,L_outputs,'Linearized Model Ouputs')
+Plot_Outputs(t,L_outputs,'Linearized Model Outputs')
+
+% Noisy Measurements
+Plot_Outputs(t,noisy_ouputs,'Noisy Measurement Model Outputs')
 
 % LKF Results
-Plot_Outputs(t,LKF_outputs,'LKF Ouputs')
+Plot_KFState_Results(t,x_pert_noisy,x_LKF,LKF_state_err,Ppkp1_LKF,'LKF State Estimate Results',...
+    'LKF State Estimate Error',Full_Dynamics_Labels,Error_Dynamics_Labels)

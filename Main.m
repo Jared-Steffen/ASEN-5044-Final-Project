@@ -157,7 +157,7 @@ u_nom = zeros(2,length(tspan));
 u = zeros(2,length(tspan));
 
 %% Tuning Knob
-Q = 10.*Qtrue;
+Q = 80*Qtrue;
 
 %% Noise and Covariance
 % Process Noise Matrix
@@ -184,13 +184,13 @@ for k = 1:N-1
     [~,x_pert_k] = ode45(@(current_tspan,pert_var0)...
         OrbitEOM(current_tspan,pert_var0,mu),current_tspan,x_true_pert,options);
     xtrue_kp1 = x_pert_k(end,:); 
-    w_k = chol(Q,"lower")*randn(2,1);
+    w_k = chol(Qtrue,"lower")*randn(2,1);
     x_true_pert = xtrue_kp1' + Omegabar*w_k;
     x_pert_noisy(k+1,:) = x_true_pert;
 end
 
 % Initialize Covariance
-Pp0 = diag([100,1,100,1]);
+Pp0 = diag([1000,1,1000,1]);
 
 %% LKF
 [x_LKF,y_LKF,Pmkp1_LKF,Ppkp1_LKF,innov_LKF,delta_x_LKF] = LKF...
@@ -203,6 +203,7 @@ LKF_state_err = x_LKF-x_pert_noisy;
 [x_EKF, P_EKF, y_EKF] = EKF(Q, R, y_pert_noise, t, mu, RE, wE, nom_var0, Pp0, station_vis);
 
 EKF_outputs = [y_EKF station_vis];
+x_EKF_state_err = x_EKF'-x_pert_noisy;
 
 %% Plots
 % Dynamics Labels
@@ -227,11 +228,11 @@ Plot_Outputs(t,L_outputs,'Linearized Model Outputs')
 Plot_Outputs(t,noisy_ouputs,'Noisy Measurement Model Outputs')
 
 % LKF Results
-Plot_Outputs(t,LKF_outputs,'LKF Ouputs')
+Plot_Outputs(t,LKF_outputs,'LKF Outputs')
 
 %EKF Results
-Plot_Outputs(t,EKF_outputs,'EKF Ouputs')
+Plot_Outputs(t,EKF_outputs,'EKF Outputs')
 
-Plot_KFState_Results(t,x_pert_noisy,x_LKF,LKF_state_err,Ppkp1_LKF,'LKF State Estimate Results',...
-    'LKF State Estimate Error',Full_Dynamics_Labels,Error_Dynamics_Labels)
+Plot_KFState_Results(t,x_pert_noisy,x_EKF',x_EKF_state_err,P_EKF,'EKF State Estimate Results',...
+    'EKF State Estimate Error',Full_Dynamics_Labels,Error_Dynamics_Labels)
 

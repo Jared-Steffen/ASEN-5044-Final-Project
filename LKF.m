@@ -1,4 +1,4 @@
-function [x_full,y_full,Pmkp1,Ppkp1,innov,delta_xpkp1] = LKF...
+function [x_full,y_full,Ppkp1,innov,delta_xpkp1] = LKF...
     (F,G,H,Q,R,Omega,delta_x0,Pp0,x_nom,u_nom,u,y_nom,y_noisy)
 
     % Preallocate/initialize
@@ -10,7 +10,7 @@ function [x_full,y_full,Pmkp1,Ppkp1,innov,delta_xpkp1] = LKF...
     Ppkp1(:,:,1) = Pp0;
     delta_uk = u - u_nom;
    
-    % LKF Algorithm = 
+    % LKF Algorithm
     for k = 1:N-1
         % Time update/prediction step
         delta_xmkp1 = F(:,:,k)*delta_xpkp1(:,k) + G*delta_uk(:,k);

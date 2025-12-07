@@ -156,8 +156,10 @@ end
 u_nom = zeros(2,length(tspan));
 u = zeros(2,length(tspan));
 
-%% Tuning Knob
-Q = 80*Qtrue;
+%% Tuning Knobs
+Q_LKF = 1*Qtrue;
+Q_EKF = 1*Qtrue;
+Q_UKF = 1*Qtrue;
 
 %% Noise and Covariance
 % Process Noise Matrix
@@ -181,8 +183,8 @@ x_pert_noisy = zeros(N,4);
 x_pert_noisy(1,:) = pert_var0';
 for k = 1:N-1
     current_tspan = [tspan(k) tspan(k+1)];
-    [~,x_pert_k] = ode45(@(current_tspan,pert_var0)...
-        OrbitEOM(current_tspan,pert_var0,mu),current_tspan,x_true_pert,options);
+    [~,x_pert_k] = ode45(@(current_tspan,x_true_pert)...
+        OrbitEOM(current_tspan,x_true_pert,mu),current_tspan,x_true_pert,options);
     xtrue_kp1 = x_pert_k(end,:); 
     w_k = chol(Qtrue,"lower")*randn(2,1);
     x_true_pert = xtrue_kp1' + Omegabar*w_k;
@@ -193,17 +195,27 @@ end
 Pp0 = diag([1000,1,1000,1]);
 
 %% LKF
-[x_LKF,y_LKF,Pmkp1_LKF,Ppkp1_LKF,innov_LKF,delta_x_LKF] = LKF...
-    (Fk,G,Hk,Q,R,Omegabar,delta_x0,Pp0,x_nom,u_nom,u,y_nom,y_pert_noise);
+[x_LKF,y_LKF,P_LKF,innov_LKF,delta_x_LKF] = LKF...
+    (Fk,G,Hk,Q_LKF,R,Omegabar,delta_x0,Pp0,x_nom,u_nom,u,y_nom,y_pert_noise);
 
 LKF_outputs = [y_LKF station_vis];
 LKF_state_err = x_LKF-x_pert_noisy;
 
 %% EKF
-[x_EKF, P_EKF, y_EKF] = EKF(Q, R, y_pert_noise, t, mu, RE, wE, nom_var0, Pp0, station_vis);
+[x_EKF,P_EKF,y_EKF] = EKF(Q_EKF,R,y_pert_noise,t,mu,RE,wE,nom_var0,Pp0,station_vis);
 
 EKF_outputs = [y_EKF station_vis];
-x_EKF_state_err = x_EKF'-x_pert_noisy;
+EKF_state_err = x_EKF'-x_pert_noisy;
+
+%% UKF
+alpha = 1e-4;
+beta = 2;
+kappa = 0;
+[x_UKF,P_UKF,y_UKF] = UKF(t,mu,RE,wE,nom_var0,Pp0,Q_UKF,...
+    R,Omegabar,alpha,beta,kappa,y_pert_noise,station_vis);
+
+UKF_outputs = [y_UKF station_vis];
+UKF_state_err = x_UKF'-x_pert_noisy;
 
 %% Plots
 % Dynamics Labels
@@ -230,9 +242,20 @@ Plot_Outputs(t,noisy_ouputs,'Noisy Measurement Model Outputs')
 % LKF Results
 Plot_Outputs(t,LKF_outputs,'LKF Outputs')
 
-%EKF Results
+Plot_KFState_Results(t,x_pert_noisy,x_LKF,LKF_state_err,P_LKF,'LKF State Estimate Results',...
+    'LKF State Estimate Error',Full_Dynamics_Labels,Error_Dynamics_Labels)
+
+% EKF Results
 Plot_Outputs(t,EKF_outputs,'EKF Outputs')
 
-Plot_KFState_Results(t,x_pert_noisy,x_EKF',x_EKF_state_err,P_EKF,'EKF State Estimate Results',...
+Plot_KFState_Results(t,x_pert_noisy,x_EKF',EKF_state_err,P_EKF,'EKF State Estimate Results',...
     'EKF State Estimate Error',Full_Dynamics_Labels,Error_Dynamics_Labels)
+
+% UKF Results
+Plot_Outputs(t,UKF_outputs,'UKF Outputs')
+
+Plot_KFState_Results(t,x_pert_noisy,x_UKF',UKF_state_err,P_UKF,'UKF State Estimate Results',...
+    'UKF State Estimate Error',Full_Dynamics_Labels,Error_Dynamics_Labels)
+
+
 

@@ -1,5 +1,10 @@
 function [output_var,station_vis] = MeasuredOutput(t,state,RE,wE,NaN_bool)
     % Goal: Output measured outputs (rho, rho_dot, phi) for each visible station
+    % t: time vector
+    % state: satellite state vector
+    % RE: radius of Earth
+    % wE: rotational rate of Earth
+    % NaN_bool: if true, hides non visible measurements with NaN
 
     % Extract state info
     N = length(t);
@@ -24,17 +29,17 @@ function [output_var,station_vis] = MeasuredOutput(t,state,RE,wE,NaN_bool)
             ((y_t-Ys_it).*(y_dot_t-Ysdot_it)))./rho_it(:,i);
         station_vis(:,i) = i.*ones(length(rho_it(:,i)),1);
         if NaN_bool == true
-            for k = 1:N-1
-                if abs(wrapToPi(phi_it(k+1,i) - theta_it(k+1))) < pi/2
-                    phi_it(k+1,i) = phi_it(k+1,i);
-                    rho_it(k+1,i) = rho_it(k+1,i);
-                    rhodot_it(k+1,i) = rhodot_it(k+1,i);
-                    station_vis(k+1,i) = station_vis(k+1,i);
+            for k = 1:N
+                if abs(wrapToPi(phi_it(k,i) - theta_it(k))) < pi/2
+                    phi_it(k,i) = phi_it(k,i);
+                    rho_it(k,i) = rho_it(k,i);
+                    rhodot_it(k,i) = rhodot_it(k,i);
+                    station_vis(k,i) = station_vis(k,i);
                 else
-                    phi_it(k+1,i) = NaN;
-                    rho_it(k+1,i) = NaN;
-                    rhodot_it(k+1,i) = NaN;
-                    station_vis(k+1,i) = NaN;
+                    phi_it(k,i) = NaN;
+                    rho_it(k,i) = NaN;
+                    rhodot_it(k,i) = NaN;
+                    station_vis(k,i) = NaN;
                 end
             end
         else
@@ -46,8 +51,13 @@ function [output_var,station_vis] = MeasuredOutput(t,state,RE,wE,NaN_bool)
         yi(3*i-3 + (1:3),:) = [rho_it(:,i)';rhodot_it(:,i)';phi_it(:,i)'];
     end
     station_vis = station_vis';
-    station_vis(:,1) = NaN;
-    yi(:,1) = NaN;
+
+    % Allows for KF alogrithms to pull one output at a time
+    if width(yi) > 1
+        station_vis(:,1) = NaN;
+        yi(:,1) = NaN;
+    end
+
     output_var = yi;
 
 end

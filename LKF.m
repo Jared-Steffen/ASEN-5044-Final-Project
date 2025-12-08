@@ -1,4 +1,4 @@
-function [x_full,y_full,Pmkp1,Ppkp1,innov,delta_xpkp1] = LKF...
+function [x_full,y_full,Pmkp1,Ppkp1,innov,delta_xpkp1,Skp1] = LKF...
     (F,G,H,Q,R,Omega,delta_x0,Pp0,x_nom,u_nom,u,y_nom,y_noisy)
 
     % Preallocate/initialize
@@ -9,6 +9,8 @@ function [x_full,y_full,Pmkp1,Ppkp1,innov,delta_xpkp1] = LKF...
     y_full = cell(N,1);
     Ppkp1(:,:,1) = Pp0;
     delta_uk = u - u_nom;
+    Skp1 = cell(N,1);
+    Skp1{1} = zeros(length(y_noisy{1}), length(y_noisy{1}));
    
     % LKF Algorithm = 
     for k = 1:N-1
@@ -19,7 +21,8 @@ function [x_full,y_full,Pmkp1,Ppkp1,innov,delta_xpkp1] = LKF...
         % Measurement update/correction step
         K = height(H{k+1})/3;
         Rk = kron(eye(K),R);
-        Kkp1 = Pmkp1(:,:,k)*H{k+1}'/(H{k+1}*Pmkp1(:,:,k)*H{k+1}'+Rk);
+        Skp1{k+1} = (H{k+1}*Pmkp1(:,:,k)*H{k+1}'+Rk);
+        Kkp1 = Pmkp1(:,:,k)*H{k+1}'/Skp1{k+1};
         delta_ykp1 = y_noisy{k+1} - y_nom{k+1};
         Ppkp1(:,:,k+1) = (eye(4)-Kkp1*H{k+1})*Pmkp1(:,:,k);
         delta_xpkp1(:,k+1) = delta_xmkp1+Kkp1*(delta_ykp1-H{k+1}*delta_xmkp1);
@@ -34,4 +37,3 @@ function [x_full,y_full,Pmkp1,Ppkp1,innov,delta_xpkp1] = LKF...
     % Add to nominal state
     x_full = x_nom + delta_xpkp1';
 end
-

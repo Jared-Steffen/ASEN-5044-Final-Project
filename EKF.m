@@ -2,7 +2,7 @@
 
 %This function implements the Extended Kalman Filter as learned in ASEN
 %5044
-function [xhatp, Pp, yhat, Sv] = EKF(Q, R, ydata, tvec, mu, rE, wE, xhat0, P0, station_vis)
+function [xhatp, Pp, yhat,innov, Sv] = EKF(Q, R, ydata, tvec, mu, rE, wE, xhat0, P0, station_vis)
 %inputs
 %1. Q - Process noise covariance
 %2. R - Measurement Noise Covariance
@@ -30,6 +30,7 @@ xhatp = zeros(4, N);
 Pp = zeros(4, 4, N);
 yhat = cell(N,1);
 Sv = cell(N,1);
+innov = cell(N,1);
 
 %step 1
 %initializing
@@ -74,7 +75,7 @@ for k = 1:N-1
         yhat{k+1} = yfa;
         
         %innovation
-        innov = ydata{k+1} - yhat{k+1};
+        innov{k+1} = ydata{k+1} - yhat{k+1};
         
         Rk = kron(eye(m), R);
         

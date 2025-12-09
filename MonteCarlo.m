@@ -156,7 +156,7 @@ for sim_num = 1:num_sims
     end
 
     % Run EKF and calculate NEES and NIS
-    [x_EKF, P_EKF, y_EKF, Sv_EKF] = EKF...
+    [x_EKF, P_EKF, y_EKF, innov_EKF, Sv_EKF] = EKF...
         (Q, R, y_pert_noisy, tspan', mu, RE, wE, nom_var0, Pp0, station_vis_cell);
     e_y_EKF = cell(N,1);
     for k=2:N
@@ -164,8 +164,11 @@ for sim_num = 1:num_sims
         e_x_EKF(k,:) = x_pert_noisy(k,:) - x_EKF(:,k)';
         epsilon_x_EKF(k,sim_num) = e_x_EKF(k,:) * (P_EKF(:,:,k) \ e_x_EKF(k,:)');
         % calculate epsilon_y for each time step k
-        e_y_EKF{k} = y_pert_noisy{k} - y_EKF{k};
-        epsilon_y_EKF(k,sim_num) = e_y_EKF{k}' * (Sv_EKF{k} \ e_y_EKF{k});
+        if isempty(innov_EKF{k})
+            epsilon_y_EKF(k,sim_num) = NaN;
+        else
+            epsilon_y_EKF(k,sim_num) = innov_EKF{k}' * (Sv_EKF{k} \ innov_EKF{k});
+        end
     end
 end
 % Calculate NEES and NIS
@@ -216,5 +219,5 @@ xlabel('Time Step k');
 ylabel('$\bar{\epsilon}_y$', 'Interpreter', 'latex');
 title('EKF NIS Test Results');
 xlim([1,N]);
-% plot(1:N,r1_NIS,'--',"Color","red");
-% plot(1:N,r2_NIS,'--',"Color","red");
+plot(1:N,r1_NIS,'--',"Color","red");
+plot(1:N,r2_NIS,'--',"Color","red");

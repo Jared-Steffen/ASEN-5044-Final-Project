@@ -144,7 +144,7 @@ for sim_num = 1:num_sims
     
     % Run LKF and calculate NEES and NIS
     delta_x0_KF = zeros(4,1);
-    [x_LKF,y_LKF,Pmkp1_LKF,Ppkp1_LKF,innov_LKF,delta_x_LKF,Skp1] = LKF...
+    [x_LKF,y_LKF,Ppkp1_LKF,innov_LKF,delta_x_LKF,Skp1] = LKF...
         (Fk,G,Hk,Q,R,Omegabar,delta_x0_KF,Pp0,x_nom,u_nom,u,y_nom,y_pert_noisy);
     % e_y_LKF = cell(N,1);
     for k=2:N

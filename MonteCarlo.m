@@ -19,7 +19,7 @@ tspan = 0:delta_t:14000; % s
 N = length(tspan);
 
 % Initialize Covariance
-Pp0 = diag([1000,1,1000,1]);
+Pp0 = diag([100,1,100,1]);
 
 % ode45 options
 options = odeset('RelTol',1e-6,'AbsTol',1e-9);
@@ -28,9 +28,6 @@ options = odeset('RelTol',1e-6,'AbsTol',1e-9);
 data = load('orbitdeterm_finalproj_KFdata.mat');
 Qtrue = data.Qtrue;
 R = data.Rtrue;
-% KF Tuning Knob
-Q = 80*Qtrue;
-
 % Inputs
 u_nom = zeros(2,length(tspan));
 u = zeros(2,length(tspan));
@@ -38,6 +35,20 @@ u = zeros(2,length(tspan));
 % Getting nominal trajectory and measurements
 [~,x_nom] = ode45(@(tspan,var0) OrbitEOM(tspan,var0,mu),tspan,nom_var0,options);
 [output_var_nom,~] = MeasuredOutput(tspan',x_nom,RE,wE,false);
+
+%% KF Tuning Knob
+% LKF
+Q_LKF = 80*Qtrue;
+
+% EKF
+Q_EKF = 80*Qtrue;
+
+% UKF
+alpha = 1e-4;
+beta = 2;
+kappa = 0;
+Q_UKF = 80*Qtrue;
+
 
 %% CT Dynamics
 Abar = @(t) [0 1 0 0
@@ -145,7 +156,7 @@ for sim_num = 1:num_sims
     % Run LKF and calculate NEES and NIS
     delta_x0_KF = zeros(4,1);
     [x_LKF,y_LKF,Ppkp1_LKF,innov_LKF,delta_x_LKF,Skp1] = LKF...
-        (Fk,G,Hk,Q,R,Omegabar,delta_x0_KF,Pp0,x_nom,u_nom,u,y_nom,y_pert_noisy);
+        (Fk,G,Hk,Q_LKF,R,Omegabar,delta_x0_KF,Pp0,x_nom,u_nom,u,y_nom,y_pert_noisy);
     % e_y_LKF = cell(N,1);
     for k=2:N
         % calculate epsilon_x for each time step k
@@ -157,7 +168,7 @@ for sim_num = 1:num_sims
 
     % Run EKF and calculate NEES and NIS
     [x_EKF, P_EKF, y_EKF, innov_EKF, Sv_EKF] = EKF...
-        (Q, R, y_pert_noisy, tspan', mu, RE, wE, nom_var0, Pp0, station_vis_cell);
+        (Q_EKF, R, y_pert_noisy, tspan', mu, RE, wE, nom_var0, Pp0, station_vis_cell);
     e_y_EKF = cell(N,1);
     for k=2:N
         % calculate epsilon_x for each time step k
@@ -168,6 +179,21 @@ for sim_num = 1:num_sims
             epsilon_y_EKF(k,sim_num) = NaN;
         else
             epsilon_y_EKF(k,sim_num) = innov_EKF{k}' * (Sv_EKF{k} \ innov_EKF{k});
+        end
+    end
+    
+    % Run UKF and calculate NEES and NIS
+    [x_UKF,P_UKF,y_UKF,innov_UKF,Sv_UKF] = UKF(tspan,mu,RE,wE,nom_var0,Pp0,Q_UKF,...
+        R,Omegabar,alpha,beta,kappa,y_pert_noisy,station_vis_cell);
+    for k=2:N
+        % calculate epsilon_x for each time step k
+        e_x_UKF(k,:) = x_pert_noisy(k,:) - x_UKF(:,k)';
+        epsilon_x_UKF(k,sim_num) = e_x_UKF(k,:) * (P_UKF(:,:,k) \ e_x_UKF(k,:)');
+        % calculate epsilon_y for each time step k
+        if isempty(innov_UKF{k})
+            epsilon_y_UKF(k,sim_num) = NaN;
+        else
+            epsilon_y_UKF(k,sim_num) = innov_UKF{k}' * (Sv_UKF{k} \ innov_UKF{k});
         end
     end
 end
@@ -218,6 +244,27 @@ scatter(1:N, epsilonbar_y_EKF, 16, 'filled'); grid on; hold on;
 xlabel('Time Step k');
 ylabel('$\bar{\epsilon}_y$', 'Interpreter', 'latex');
 title('EKF NIS Test Results');
+xlim([1,N]);
+plot(1:N,r1_NIS,'--',"Color","red");
+plot(1:N,r2_NIS,'--',"Color","red");
+
+epsilonbar_x_UKF = (1/num_sims) .* sum(epsilon_x_UKF,2);
+epsilonbar_y_UKF = (1/num_sims) .* sum(epsilon_y_UKF,2);
+
+figure;
+scatter(1:N, epsilonbar_x_UKF, 16, 'filled'); grid on; hold on;
+xlabel('Time Step k');
+ylabel('$\bar{\epsilon}_x$', 'Interpreter', 'latex');
+title('UKF NEES Test Results');
+xlim([1,N]);
+yline(r1_NEES,'--',"r1","Color","red");
+yline(r2_NEES,'--',"r2","Color","red");
+
+figure;
+scatter(1:N, epsilonbar_y_UKF, 16, 'filled'); grid on; hold on;
+xlabel('Time Step k');
+ylabel('$\bar{\epsilon}_y$', 'Interpreter', 'latex');
+title('UKF NIS Test Results');
 xlim([1,N]);
 plot(1:N,r1_NIS,'--',"Color","red");
 plot(1:N,r2_NIS,'--',"Color","red");

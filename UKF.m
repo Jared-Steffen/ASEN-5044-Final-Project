@@ -1,4 +1,4 @@
-function [xpkp1,Ppkp1,ymkp1] = UKF(t,mu,RE,wE,xp0,P0,Q,R,Omega,alpha,beta,kappa,y_data,station_vis)
+function [xpkp1,Ppkp1,ymkp1,innov,Pyykp1] = UKF(t,mu,RE,wE,xp0,P0,Q,R,Omega,alpha,beta,kappa,y_data,station_vis)
     % Inputs:
     % t: time vector
     % mu: EArth's gravitational parameter
@@ -19,6 +19,8 @@ function [xpkp1,Ppkp1,ymkp1] = UKF(t,mu,RE,wE,xp0,P0,Q,R,Omega,alpha,beta,kappa,
     % xpkp1: state estimates
     % Ppkp1: state covariance
     % ymkp1: predicted measurements
+    % innov: innovation term
+    % Pyykp1: innovation covariance matrix
 
     % ode45 options
     options = odeset('RelTol',1e-6,'AbsTol',1e-9);
@@ -35,6 +37,8 @@ function [xpkp1,Ppkp1,ymkp1] = UKF(t,mu,RE,wE,xp0,P0,Q,R,Omega,alpha,beta,kappa,
     wm = zeros(1,2*n+1);
     wc = zeros(1,2*n+1);
     ymkp1 = cell(N,1);
+    innov = cell(N,1);
+    Pyykp1_ = cell(N,1);
 
     % Calulate necessary constants
     lambda = alpha^2*(n+kappa)-n;
@@ -101,15 +105,16 @@ function [xpkp1,Ppkp1,ymkp1] = UKF(t,mu,RE,wE,xp0,P0,Q,R,Omega,alpha,beta,kappa,
             ymkp1{k+1} = [];
             xpkp1(:,k+1) = xmkp1;
             Ppkp1(:,:,k+1) = Pmkp1;
-        else
+            innov{k+1} = [];
+        else 
             ymkp1{k+1} = gammabar_kp1 * wm';
             K = length(ymkp1{k+1});
-            Pyykp1 = zeros(size(kron(eye(K/3),R)));
+            Pyykp1_ = zeros(size(kron(eye(K/3),R)));
             for i = 1:2*n+1
-                Pyykp1 = wc(i)*(gammabar_kp1(:,i)-ymkp1{k+1})...
-                    *(gammabar_kp1(:,i)-ymkp1{k+1})' + Pyykp1;
+                Pyykp1_ = wc(i)*(gammabar_kp1(:,i)-ymkp1{k+1})...
+                    *(gammabar_kp1(:,i)-ymkp1{k+1})' + Pyykp1_;
             end
-            Pyykp1 = Pyykp1 + kron(eye(K/3),R);
+            Pyykp1{k+1} = Pyykp1_ + kron(eye(K/3),R);
     
             % Get state-measurement cross covariance matrix
             Pxykp1 = zeros(n,size(kron(eye(K/3),R),1));
@@ -119,11 +124,12 @@ function [xpkp1,Ppkp1,ymkp1] = UKF(t,mu,RE,wE,xp0,P0,Q,R,Omega,alpha,beta,kappa,
             end
     
             % Estimate Kalman Gain
-            Kkp1 = Pxykp1/Pyykp1;
+            Kkp1 = Pxykp1/Pyykp1{k+1};
     
             % Update State and Covariace
-            xpkp1(:,k+1) = xmkp1+Kkp1*(y_data{k+1}-ymkp1{k+1});
-            Ppkp1(:,:,k+1) = Pmkp1-Kkp1*Pyykp1*Kkp1';
+            innov{k+1} = y_data{k+1}-ymkp1{k+1};
+            xpkp1(:,k+1) = xmkp1+Kkp1*(innov{k+1});
+            Ppkp1(:,:,k+1) = Pmkp1-Kkp1*Pyykp1{k+1}*Kkp1';
         end
     end
 

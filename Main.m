@@ -160,6 +160,9 @@ u = zeros(2,length(tspan));
 Q_LKF = 1*Qtrue;
 Q_EKF = 1*Qtrue;
 Q_UKF = 1*Qtrue;
+alpha = 1e-4;
+beta = 2;
+kappa = 0;
 
 %% Noise and Covariance
 % Process Noise Matrix
@@ -192,26 +195,23 @@ for k = 1:N-1
 end
 
 % Initialize Covariance
-Pp0 = diag([1000,1,1000,1]);
+Pp0 = diag([100,1,100,1]);
 
 %% LKF
-[x_LKF,y_LKF,P_LKF,innov_LKF,delta_x_LKF] = LKF...
+[x_LKF,y_LKF,P_LKF,innov_LKF,delta_x_LKF,Sv_LKF] = LKF...
     (Fk,G,Hk,Q_LKF,R,Omegabar,delta_x0,Pp0,x_nom,u_nom,u,y_nom,y_pert_noise);
 
 LKF_outputs = [y_LKF station_vis];
 LKF_state_err = x_LKF-x_pert_noisy;
 
 %% EKF
-[x_EKF,P_EKF,y_EKF,Sv_EKF] = EKF(Q_EKF,R,y_pert_noise,t,mu,RE,wE,nom_var0,Pp0,station_vis);
+[x_EKF,P_EKF,y_EKF,innov_EKF,Sv_EKF] = EKF(Q_EKF,R,y_pert_noise,t,mu,RE,wE,nom_var0,Pp0,station_vis);
 
 EKF_outputs = [y_EKF station_vis];
 EKF_state_err = x_EKF'-x_pert_noisy;
 
 %% UKF
-alpha = 1e-4;
-beta = 2;
-kappa = 0;
-[x_UKF,P_UKF,y_UKF] = UKF(t,mu,RE,wE,nom_var0,Pp0,Q_UKF,...
+[x_UKF,P_UKF,y_UKF,innov_UKF,Sv_UKF] = UKF(t,mu,RE,wE,nom_var0,Pp0,Q_UKF,...
     R,Omegabar,alpha,beta,kappa,y_pert_noise,station_vis);
 
 UKF_outputs = [y_UKF station_vis];

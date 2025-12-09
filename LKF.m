@@ -16,15 +16,15 @@ function [x_full,y_full,Ppkp1,innov,delta_xpkp1,Skp1] = LKF...
     for k = 1:N-1
         % Time update/prediction step
         delta_xmkp1 = F(:,:,k)*delta_xpkp1(:,k) + G*delta_uk(:,k);
-        Pmkp1(:,:,k) = F(:,:,k)*Ppkp1(:,:,k)*F(:,:,k)' + Omega*Q*Omega';
+        Pmkp1 = F(:,:,k)*Ppkp1(:,:,k)*F(:,:,k)' + Omega*Q*Omega';
 
         % Measurement update/correction step
         K = height(H{k+1})/3;
         Rk = kron(eye(K),R);
-        Skp1{k+1} = (H{k+1}*Pmkp1(:,:,k)*H{k+1}'+Rk);
-        Kkp1 = Pmkp1(:,:,k)*H{k+1}'/Skp1{k+1};
+        Skp1{k+1} = (H{k+1}*Pmkp1*H{k+1}'+Rk);
+        Kkp1 = Pmkp1*H{k+1}'/Skp1{k+1};
         delta_ykp1 = y_noisy{k+1} - y_nom{k+1};
-        Ppkp1(:,:,k+1) = (eye(4)-Kkp1*H{k+1})*Pmkp1(:,:,k);
+        Ppkp1(:,:,k+1) = (eye(4)-Kkp1*H{k+1})*Pmkp1;
         delta_xpkp1(:,k+1) = delta_xmkp1+Kkp1*(delta_ykp1-H{k+1}*delta_xmkp1);
 
         % Innovation

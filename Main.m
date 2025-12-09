@@ -202,7 +202,7 @@ LKF_outputs = [y_LKF station_vis];
 LKF_state_err = x_LKF-x_pert_noisy;
 
 %% EKF
-[x_EKF,P_EKF,y_EKF] = EKF(Q_EKF,R,y_pert_noise,t,mu,RE,wE,nom_var0,Pp0,station_vis);
+[x_EKF,P_EKF,y_EKF,Sv_EKF] = EKF(Q_EKF,R,y_pert_noise,t,mu,RE,wE,nom_var0,Pp0,station_vis);
 
 EKF_outputs = [y_EKF station_vis];
 EKF_state_err = x_EKF'-x_pert_noisy;

@@ -239,6 +239,68 @@ Plot_Outputs(t,L_outputs,'Linearized Model Outputs')
 % Noisy Measurements
 Plot_Outputs(t,noisy_ouputs,'Noisy Measurement Model Outputs')
 
+% Noisy States
+figure();
+subplot(411)
+set(gca, 'ColorOrder', [0 0.4470 0.7410], 'NextPlot', 'add'); 
+plot(t,x_pert_noisy(:,1),'LineWidth',2)
+hold on; grid on; grid minor
+plot(t,x_pert(:,1),'--k','LineWidth',2)
+xlabel('Time [s]')
+ylabel(Full_Dynamics_Labels(1),'Interpreter','latex')
+subplot(412)
+set(gca, 'ColorOrder', [0 0.4470 0.7410], 'NextPlot', 'add'); 
+plot(t,x_pert_noisy(:,2),'LineWidth',2)
+hold on; grid on; grid minor
+plot(t,x_pert(:,2),'--k','LineWidth',2)
+xlabel('Time [s]')
+ylabel(Full_Dynamics_Labels(2),'Interpreter','latex')
+subplot(413)
+set(gca, 'ColorOrder', [0 0.4470 0.7410], 'NextPlot', 'add'); 
+plot(t,x_pert_noisy(:,3),'LineWidth',2)
+hold on; grid on; grid minor
+plot(t,x_pert(:,3),'--k','LineWidth',2)
+xlabel('Time [s]')
+ylabel(Full_Dynamics_Labels(3),'Interpreter','latex')
+subplot(414)
+set(gca, 'ColorOrder', [0 0.4470 0.7410], 'NextPlot', 'add'); 
+plot(t,x_pert_noisy(:,4),'LineWidth',2)
+hold on; grid on; grid minor
+plot(t,x_pert(:,4),'--k','LineWidth',2)
+xlabel('Time [s]')
+ylabel(Full_Dynamics_Labels(4),'Interpreter','latex')
+legend('Noisy State','True State')
+sgtitle('Noisy vs True States')
+
+state_errors = x_pert_noisy - x_pert;
+figure();
+subplot(411)
+set(gca, 'ColorOrder', [0 0.4470 0.7410], 'NextPlot', 'add'); 
+grid on; grid minor
+plot(t,state_errors(:,1),'LineWidth',2)
+xlabel('Time [s]')
+ylabel(Error_Dynamics_Labels(1),'Interpreter','latex')
+subplot(412)
+set(gca, 'ColorOrder', [0 0.4470 0.7410], 'NextPlot', 'add'); 
+grid on; grid minor
+plot(t,state_errors(:,2),'LineWidth',2)
+xlabel('Time [s]')
+ylabel(Error_Dynamics_Labels(2),'Interpreter','latex')
+subplot(413)
+set(gca, 'ColorOrder', [0 0.4470 0.7410], 'NextPlot', 'add'); 
+grid on; grid minor
+plot(t,state_errors(:,3),'LineWidth',2)
+xlabel('Time [s]')
+ylabel(Error_Dynamics_Labels(3),'Interpreter','latex')
+subplot(414)
+set(gca, 'ColorOrder', [0 0.4470 0.7410], 'NextPlot', 'add'); 
+grid on; grid minor
+plot(t,state_errors(:,4),'LineWidth',2)
+xlabel('Time [s]')
+ylabel(Error_Dynamics_Labels(4),'Interpreter','latex')
+legend('Noisy Error')
+sgtitle('Process Noise State Error')
+
 % LKF Results
 Plot_Outputs(t,LKF_outputs,'LKF Outputs')
 

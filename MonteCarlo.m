@@ -32,21 +32,6 @@ tvec_datalog = data.tvec;
 ydatalog = data.ydata';
 ydatalog(1) = cell(1,1);
 
-% Modify ydatalog for plotting fxn
-ydatalog_mod = cell(N,1);
-station_vis_datalog = cell(N,1);
-for k = 1:N
-    current_y = cell2mat(ydatalog(k));
-    if isempty(current_y)
-        continue
-    else
-        station_vis_datalog{k} = current_y(end,:)';
-        ydatalog_mod{k} = current_y(1:end-1,:);  % take the top 3 rows
-        ydatalog_mod{k} = ydatalog_mod{k}(:);    % column-wise vectorization
-    end
-end
-
-
 % Inputs
 u_nom = zeros(2,length(tspan));
 u = zeros(2,length(tspan));

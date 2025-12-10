@@ -1,4 +1,5 @@
-function [xpkp1,Ppkp1,ymkp1,innov,Pyykp1] = UKF(t,mu,RE,wE,xp0,P0,Q,R,Omega,alpha,beta,kappa,y_data,station_vis)
+function [xpkp1,Ppkp1,ymkp1,innov,Pyykp1] = UKF...
+    (t,mu,RE,wE,xp0,P0,Q,R,Omega,alpha,beta,kappa,y_data,station_vis)
     % Inputs:
     % t: time vector
     % mu: EArth's gravitational parameter

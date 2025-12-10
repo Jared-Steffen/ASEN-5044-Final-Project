@@ -5,10 +5,10 @@ function Plot_KFState_Results(t,state,estimated_state,state_errors,Ppkp1,...
     % subplot_title2 and y_labels2 are for the estimate error
     
     % Extract Variances
-    X_var = Ppkp1(1,1,:);
-    X_dot_var = Ppkp1(2,2,:);
-    Y_var = Ppkp1(3,3,:);
-    Y_dot_var = Ppkp1(4,4,:);
+    X_var     = squeeze(Ppkp1(1,1,:));
+    X_dot_var = squeeze(Ppkp1(2,2,:));
+    Y_var     = squeeze(Ppkp1(3,3,:));
+    Y_dot_var = squeeze(Ppkp1(4,4,:));
 
     % Calculate Sigma Bound Magnitude
     X_sigma(:,1) = sqrt(X_var);

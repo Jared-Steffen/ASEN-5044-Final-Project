@@ -19,7 +19,7 @@ tspan = 0:delta_t:14000; % s
 N = length(tspan);
 
 % Initialize Covariance
-Pp0 = diag([100,1,100,1]);
+Pp0 = diag([2,2e-3,2,2e-3]);
 
 % ode45 options
 options = odeset('RelTol',1e-6,'AbsTol',1e-9);
@@ -44,10 +44,10 @@ Q_LKF = 80*Qtrue;
 Q_EKF = 80*Qtrue;
 
 % UKF
-alpha = 1e-4;
+alpha = 0.05;% 0.05
 beta = 2;
 kappa = 0;
-Q_UKF = 80*Qtrue;
+Q_UKF = 1.025*Qtrue; % 1.03
 
 
 %% CT Dynamics
@@ -99,7 +99,7 @@ end
 G = delta_t.*Bbar;
 
 %% MC
-num_sims = 10;
+num_sims = 50;
 epsilon_x = zeros(N,num_sims);
 epsilon_y = zeros(N,num_sims);
 for sim_num = 1:num_sims
@@ -153,34 +153,34 @@ for sim_num = 1:num_sims
         p(k) = size(H,1);
     end
     
-    % Run LKF and calculate NEES and NIS
-    delta_x0_KF = zeros(4,1);
-    [x_LKF,y_LKF,Ppkp1_LKF,innov_LKF,delta_x_LKF,Skp1] = LKF...
-        (Fk,G,Hk,Q_LKF,R,Omegabar,delta_x0_KF,Pp0,x_nom,u_nom,u,y_nom,y_pert_noisy);
-    % e_y_LKF = cell(N,1);
-    for k=2:N
-        % calculate epsilon_x for each time step k
-        e_x_LKF(k,:) = x_pert_noisy(k,:) - x_LKF(k,:);
-        epsilon_x_LKF(k,sim_num) = e_x_LKF(k,:) * (Ppkp1_LKF(:,:,k) \ e_x_LKF(k,:)');
-        % calculate epsilon_y for each time step k
-        epsilon_y_LKF(k,sim_num) = innov_LKF{k}' * (Skp1{k} \ innov_LKF{k});
-    end
-
-    % Run EKF and calculate NEES and NIS
-    [x_EKF, P_EKF, y_EKF, innov_EKF, Sv_EKF] = EKF...
-        (Q_EKF, R, y_pert_noisy, tspan', mu, RE, wE, nom_var0, Pp0, station_vis_cell);
-    e_y_EKF = cell(N,1);
-    for k=2:N
-        % calculate epsilon_x for each time step k
-        e_x_EKF(k,:) = x_pert_noisy(k,:) - x_EKF(:,k)';
-        epsilon_x_EKF(k,sim_num) = e_x_EKF(k,:) * (P_EKF(:,:,k) \ e_x_EKF(k,:)');
-        % calculate epsilon_y for each time step k
-        if isempty(innov_EKF{k})
-            epsilon_y_EKF(k,sim_num) = NaN;
-        else
-            epsilon_y_EKF(k,sim_num) = innov_EKF{k}' * (Sv_EKF{k} \ innov_EKF{k});
-        end
-    end
+    % % Run LKF and calculate NEES and NIS
+    % delta_x0_KF = zeros(4,1);
+    % [x_LKF,y_LKF,Ppkp1_LKF,innov_LKF,delta_x_LKF,Skp1] = LKF...
+    %     (Fk,G,Hk,Q_LKF,R,Omegabar,delta_x0_KF,Pp0,x_nom,u_nom,u,y_nom,y_pert_noisy);
+    % % e_y_LKF = cell(N,1);
+    % for k=2:N
+    %     % calculate epsilon_x for each time step k
+    %     e_x_LKF(k,:) = x_pert_noisy(k,:) - x_LKF(k,:);
+    %     epsilon_x_LKF(k,sim_num) = e_x_LKF(k,:) * (Ppkp1_LKF(:,:,k) \ e_x_LKF(k,:)');
+    %     % calculate epsilon_y for each time step k
+    %     epsilon_y_LKF(k,sim_num) = innov_LKF{k}' * (Skp1{k} \ innov_LKF{k});
+    % end
+    % 
+    % % Run EKF and calculate NEES and NIS
+    % [x_EKF, P_EKF, y_EKF, innov_EKF, Sv_EKF] = EKF...
+    %     (Q_EKF, R, y_pert_noisy, tspan', mu, RE, wE, nom_var0, Pp0, station_vis_cell);
+    % e_y_EKF = cell(N,1);
+    % for k=2:N
+    %     % calculate epsilon_x for each time step k
+    %     e_x_EKF(k,:) = x_pert_noisy(k,:) - x_EKF(:,k)';
+    %     epsilon_x_EKF(k,sim_num) = e_x_EKF(k,:) * (P_EKF(:,:,k) \ e_x_EKF(k,:)');
+    %     % calculate epsilon_y for each time step k
+    %     if isempty(innov_EKF{k})
+    %         epsilon_y_EKF(k,sim_num) = NaN;
+    %     else
+    %         epsilon_y_EKF(k,sim_num) = innov_EKF{k}' * (Sv_EKF{k} \ innov_EKF{k});
+    %     end
+    % end
     
     % Run UKF and calculate NEES and NIS
     [x_UKF,P_UKF,y_UKF,innov_UKF,Sv_UKF] = UKF(tspan,mu,RE,wE,nom_var0,Pp0,Q_UKF,...
@@ -198,8 +198,8 @@ for sim_num = 1:num_sims
     end
 end
 % Calculate NEES and NIS
-epsilonbar_x_LKF = (1/num_sims) .* sum(epsilon_x_LKF,2);
-epsilonbar_y_LKF = (1/num_sims) .* sum(epsilon_y_LKF,2);
+% epsilonbar_x_LKF = (1/num_sims) .* sum(epsilon_x_LKF,2);
+% epsilonbar_y_LKF = (1/num_sims) .* sum(epsilon_y_LKF,2);
 
 % Getting upper and lower bounds for NEES and NIS
 alpha = 0.05;
@@ -209,47 +209,47 @@ r1_NIS = chi2inv(alpha/2,num_sims*p)./num_sims;
 r2_NIS = chi2inv(1-alpha/2,num_sims*p)./num_sims;
 
 %% Plots of NEES and NIS for LKF and EKF
-figure;
-scatter(1:N, epsilonbar_x_LKF, 16, 'filled'); grid on; hold on;
-xlabel('Time Step k');
-ylabel('$\bar{\epsilon}_x$', 'Interpreter', 'latex');
-title('LKF NEES Test Results');
-xlim([1,N]);
-yline(r1_NEES,'--',"r1","Color","red");
-yline(r2_NEES,'--',"r2","Color","red");
-
-figure;
-scatter(1:N, epsilonbar_y_LKF, 16, 'filled'); grid on; hold on;
-xlabel('Time Step k');
-ylabel('$\bar{\epsilon}_y$', 'Interpreter', 'latex');
-title('LKF NIS Test Results');
-xlim([1,N]);
-plot(1:N,r1_NIS,'--',"Color","red");
-plot(1:N,r2_NIS,'--',"Color","red");
-
-epsilonbar_x_EKF = (1/num_sims) .* sum(epsilon_x_EKF,2);
-epsilonbar_y_EKF = (1/num_sims) .* sum(epsilon_y_EKF,2);
-
-figure;
-scatter(1:N, epsilonbar_x_EKF, 16, 'filled'); grid on; hold on;
-xlabel('Time Step k');
-ylabel('$\bar{\epsilon}_x$', 'Interpreter', 'latex');
-title('EKF NEES Test Results');
-xlim([1,N]);
-yline(r1_NEES,'--',"r1","Color","red");
-yline(r2_NEES,'--',"r2","Color","red");
-
-figure;
-scatter(1:N, epsilonbar_y_EKF, 16, 'filled'); grid on; hold on;
-xlabel('Time Step k');
-ylabel('$\bar{\epsilon}_y$', 'Interpreter', 'latex');
-title('EKF NIS Test Results');
-xlim([1,N]);
-plot(1:N,r1_NIS,'--',"Color","red");
-plot(1:N,r2_NIS,'--',"Color","red");
+% figure;
+% scatter(1:N, epsilonbar_x_LKF, 16, 'filled'); grid on; hold on;
+% xlabel('Time Step k');
+% ylabel('$\bar{\epsilon}_x$', 'Interpreter', 'latex');
+% title('LKF NEES Test Results');
+% xlim([1,N]);
+% yline(r1_NEES,'--',"r1","Color","red");
+% yline(r2_NEES,'--',"r2","Color","red");
+% 
+% figure;
+% scatter(1:N, epsilonbar_y_LKF, 16, 'filled'); grid on; hold on;
+% xlabel('Time Step k');
+% ylabel('$\bar{\epsilon}_y$', 'Interpreter', 'latex');
+% title('LKF NIS Test Results');
+% xlim([1,N]);
+% plot(1:N,r1_NIS,'--',"Color","red");
+% plot(1:N,r2_NIS,'--',"Color","red");
+% 
+% epsilonbar_x_EKF = (1/num_sims) .* sum(epsilon_x_EKF,2);
+% epsilonbar_y_EKF = (1/num_sims) .* sum(epsilon_y_EKF,2);
+% 
+% figure;
+% scatter(1:N, epsilonbar_x_EKF, 16, 'filled'); grid on; hold on;
+% xlabel('Time Step k');
+% ylabel('$\bar{\epsilon}_x$', 'Interpreter', 'latex');
+% title('EKF NEES Test Results');
+% xlim([1,N]);
+% yline(r1_NEES,'--',"r1","Color","red");
+% yline(r2_NEES,'--',"r2","Color","red");
+% 
+% figure;
+% scatter(1:N, epsilonbar_y_EKF, 16, 'filled'); grid on; hold on;
+% xlabel('Time Step k');
+% ylabel('$\bar{\epsilon}_y$', 'Interpreter', 'latex');
+% title('EKF NIS Test Results');
+% xlim([1,N]);
+% plot(1:N,r1_NIS,'--',"Color","red");
+% plot(1:N,r2_NIS,'--',"Color","red");
 
 epsilonbar_x_UKF = (1/num_sims) .* sum(epsilon_x_UKF,2);
-epsilonbar_y_UKF = (1/num_sims) .* sum(epsilon_y_UKF,2);
+epsilonbar_y_UKF = mean(epsilon_y_UKF, 2, 'omitnan');
 
 figure;
 scatter(1:N, epsilonbar_x_UKF, 16, 'filled'); grid on; hold on;
@@ -268,3 +268,30 @@ title('UKF NIS Test Results');
 xlim([1,N]);
 plot(1:N,r1_NIS,'--',"Color","red");
 plot(1:N,r2_NIS,'--',"Color","red");
+
+
+UKF_NEES_counter = 0;
+UKF_NIS_counter = 0;
+for i = 1:length(epsilonbar_y_UKF)
+    if epsilonbar_x_UKF(i) > r1_NEES && epsilonbar_x_UKF(i) < r2_NEES
+        UKF_NEES_counter =  UKF_NEES_counter + 1;
+    end
+    if epsilonbar_y_UKF(i) > r1_NIS(i) && epsilonbar_y_UKF(i) < r2_NIS(i)
+        UKF_NIS_counter =  UKF_NIS_counter + 1;
+    end
+end
+
+% NEES count (all time steps are valid for state)
+UKF_NEES_counter = sum( epsilonbar_x_UKF > r1_NEES & epsilonbar_x_UKF < r2_NEES );
+fprintf('There are %d/%d NEES points within the bounds\n', ...
+        UKF_NEES_counter, N);
+
+% NIS count: only where we actually have measurements (p > 0) and finite NIS
+valid_NIS_idx = (p(:) > 0) & ~isnan(epsilonbar_y_UKF);
+
+UKF_NIS_counter = sum( epsilonbar_y_UKF(valid_NIS_idx) > r1_NIS(valid_NIS_idx)' & ...
+                       epsilonbar_y_UKF(valid_NIS_idx) < r2_NIS(valid_NIS_idx)' );
+
+num_valid_NIS = sum(valid_NIS_idx);
+fprintf('There are %d/%d NIS points within the bounds (where measurements exist)\n', ...
+        UKF_NIS_counter, num_valid_NIS);

@@ -38,7 +38,7 @@ function [xpkp1,Ppkp1,ymkp1,innov,Pyykp1] = UKF(t,mu,RE,wE,xp0,P0,Q,R,Omega,alph
     wc = zeros(1,2*n+1);
     ymkp1 = cell(N,1);
     innov = cell(N,1);
-    Pyykp1_ = cell(N,1);
+    Pyykp1 = cell(N,1);
 
     % Calulate necessary constants
     lambda = alpha^2*(n+kappa)-n;
@@ -119,7 +119,7 @@ function [xpkp1,Ppkp1,ymkp1,innov,Pyykp1] = UKF(t,mu,RE,wE,xp0,P0,Q,R,Omega,alph
             % Get state-measurement cross covariance matrix
             Pxykp1 = zeros(n,size(kron(eye(K/3),R),1));
             for i = 1:2*n+1
-                Pxykp1 = wc(i)*(chibarkp1(:,i)-xmkp1)...
+                Pxykp1 = wc(i)*(chikp1(:,i)-xmkp1)...
                     *(gammabar_kp1(:,i)-ymkp1{k+1})' + Pxykp1;
             end
     

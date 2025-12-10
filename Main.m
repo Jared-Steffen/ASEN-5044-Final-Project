@@ -202,20 +202,20 @@ Pp0 = diag([100,1,100,1]);
     (Fk,G,Hk,Q_LKF,R,Omegabar,delta_x0,Pp0,x_nom,u_nom,u,y_nom,y_pert_noise);
 
 LKF_outputs = [y_LKF station_vis];
-LKF_state_err = x_LKF-x_pert_noisy;
+LKF_state_err = x_LKF-x_pert;
 
 %% EKF
 [x_EKF,P_EKF,y_EKF,innov_EKF,Sv_EKF] = EKF(Q_EKF,R,y_pert_noise,t,mu,RE,wE,nom_var0,Pp0,station_vis);
 
 EKF_outputs = [y_EKF station_vis];
-EKF_state_err = x_EKF'-x_pert_noisy;
+EKF_state_err = x_EKF'-x_pert;
 
 %% UKF
 [x_UKF,P_UKF,y_UKF,innov_UKF,Sv_UKF] = UKF(t,mu,RE,wE,nom_var0,Pp0,Q_UKF,...
     R,Omegabar,alpha,beta,kappa,y_pert_noise,station_vis);
 
 UKF_outputs = [y_UKF station_vis];
-UKF_state_err = x_UKF'-x_pert_noisy;
+UKF_state_err = x_UKF'-x_pert;
 
 %% Plots
 % Dynamics Labels

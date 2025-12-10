@@ -28,6 +28,25 @@ options = odeset('RelTol',1e-6,'AbsTol',1e-9);
 data = load('orbitdeterm_finalproj_KFdata.mat');
 Qtrue = data.Qtrue;
 R = data.Rtrue;
+tvec_datalog = data.tvec;
+ydatalog = data.ydata';
+ydatalog(1) = cell(1,1);
+
+% Modify ydatalog for plotting fxn
+ydatalog_mod = cell(N,1);
+station_vis_datalog = cell(N,1);
+for k = 1:N
+    current_y = cell2mat(ydatalog(k));
+    if isempty(current_y)
+        continue
+    else
+        station_vis_datalog{k} = current_y(end,:)';
+        ydatalog_mod{k} = current_y(1:end-1,:);  % take the top 3 rows
+        ydatalog_mod{k} = ydatalog_mod{k}(:);    % column-wise vectorization
+    end
+end
+
+
 % Inputs
 u_nom = zeros(2,length(tspan));
 u = zeros(2,length(tspan));
@@ -183,7 +202,7 @@ for sim_num = 1:num_sims
     % end
     
     % Run UKF and calculate NEES and NIS
-    [x_UKF,P_UKF,y_UKF,innov_UKF,Sv_UKF] = UKF(tspan,mu,RE,wE,nom_var0,Pp0,Q_UKF,...
+    [x_UKF,P_UKF,y_UKF,innov_UKF,Sv_UKF] = UKF(tvec_datalog,mu,RE,wE,nom_var0,Pp0,Q_UKF,...
         R,Omegabar,alpha,beta,kappa,y_pert_noisy,station_vis_cell);
     for k=2:N
         % calculate epsilon_x for each time step k

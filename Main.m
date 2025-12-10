@@ -148,7 +148,8 @@ for k = 1:N
         continue
     else
         station_vis_datalog{k} = current_y(end,:)';
-        ydatalog_mod{k} = reshape(current_y(1:end-1)',[],1);
+        ydatalog_mod{k} = current_y(1:end-1,:);  % take the top 3 rows
+        ydatalog_mod{k} = ydatalog_mod{k}(:);    % column-wise vectorization
     end
 end
 
@@ -212,7 +213,7 @@ EKF_state_err = x_EKF'-x_pert;
 
 %% UKF
 [x_UKF,P_UKF,y_UKF,innov_UKF,Sv_UKF] = UKF(t,mu,RE,wE,nom_var0,Pp0,Q_UKF,...
-    R,Omegabar,alpha,beta,kappa,y_pert_noise,station_vis);
+    R,Omegabar,alpha,beta,kappa,ydatalog_mod,station_vis_datalog);
 
 UKF_outputs = [y_UKF station_vis];
 UKF_state_err = x_UKF'-x_pert;

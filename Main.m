@@ -148,9 +148,11 @@ for k = 1:N
         continue
     else
         station_vis_datalog{k} = current_y(end,:)';
-        ydatalog_mod{k} = reshape(current_y(1:end-1)',[],1);
+        ydatalog_mod{k} = current_y(1:end-1,:);  % take the top 3 rows
+        ydatalog_mod{k} = ydatalog_mod{k}(:);    % column-wise vectorization
     end
 end
+
 
 % Inputs
 u_nom = zeros(2,length(tspan));

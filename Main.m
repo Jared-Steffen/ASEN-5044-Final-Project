@@ -242,19 +242,19 @@ Plot_Outputs(t,noisy_ouputs,'Noisy Measurement Model Outputs')
 % LKF Results
 Plot_Outputs(t,LKF_outputs,'LKF Outputs')
 
-Plot_KFState_Results(t,x_pert_noisy,x_LKF,LKF_state_err,P_LKF,'LKF State Estimate Results',...
+Plot_KFState_Results(t,x_pert,x_LKF,LKF_state_err,P_LKF,'LKF State Estimate Results',...
     'LKF State Estimate Error',Full_Dynamics_Labels,Error_Dynamics_Labels)
 
 % EKF Results
 Plot_Outputs(t,EKF_outputs,'EKF Outputs')
 
-Plot_KFState_Results(t,x_pert_noisy,x_EKF',EKF_state_err,P_EKF,'EKF State Estimate Results',...
+Plot_KFState_Results(t,x_pert,x_EKF',EKF_state_err,P_EKF,'EKF State Estimate Results',...
     'EKF State Estimate Error',Full_Dynamics_Labels,Error_Dynamics_Labels)
 
 % UKF Results
 Plot_Outputs(t,UKF_outputs,'UKF Outputs')
 
-Plot_KFState_Results(t,x_pert_noisy,x_UKF',UKF_state_err,P_UKF,'UKF State Estimate Results',...
+Plot_KFState_Results(t,x_pert,x_UKF',UKF_state_err,P_UKF,'UKF State Estimate Results',...
     'UKF State Estimate Error',Full_Dynamics_Labels,Error_Dynamics_Labels)
 
 

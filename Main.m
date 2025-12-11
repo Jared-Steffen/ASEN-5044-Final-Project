@@ -139,27 +139,51 @@ tvec_datalog = data.tvec;
 ydatalog = data.ydata';
 ydatalog(1) = cell(1,1);
 
-% Modify ydatalog for plotting fxn
-ydatalog_mod = cell(N,1);
-station_vis_datalog = cell(N,1);
-for k = 1:N
+
+N_log = length(ydatalog);
+t_log = tvec_datalog(:);
+
+ydatalog_mod        = cell(N_log,1);
+station_vis_datalog = cell(N_log,1);
+
+for k = 1:N_log
     current_y = cell2mat(ydatalog(k));
+
     if isempty(current_y)
-        continue
+        % No measurements at this time step
+        ydatalog_mod{k} = zeros(0,1);
+        station_vis_datalog{k} = [];
     else
         station_vis_datalog{k} = current_y(end,:)';
-        ydatalog_mod{k} = current_y(1:end-1,:);  % take the top 3 rows
-        ydatalog_mod{k} = ydatalog_mod{k}(:);    % column-wise vectorization
+        ytmp = current_y(1:end-1,:);
+        ydatalog_mod{k} = ytmp(:);
     end
 end
 
+y_nom_log = cell(N_log,1);
+for k = 1:N_log
+    stations = station_vis_datalog{k};
+
+    if isempty(stations)
+        y_nom_log{k} = zeros(0,1);
+        continue;
+    end
+
+    yk_nom = zeros(3*length(stations),1);
+    for i = 1:length(stations)
+        s = stations(i); % station index
+        rows = 3*s-2 : 3*s; % rows in output_var_nom for station s
+        yk_nom(3*i-3+(1:3)) = output_var_nom(rows, k);
+    end
+    y_nom_log{k} = yk_nom;
+end
 
 % Inputs
 u_nom = zeros(2,length(tspan));
 u = zeros(2,length(tspan));
 
 %% Tuning Knobs
-Q_LKF = 1*Qtrue;
+Q_LKF = 10000*Qtrue;
 Q_EKF = 1*Qtrue;
 Q_UKF = 1*Qtrue;
 alpha = 1e-4;
@@ -321,5 +345,77 @@ Plot_Outputs(t,UKF_outputs,'UKF Outputs')
 Plot_KFState_Results(t,x_pert,x_UKF',UKF_state_err,P_UKF,'UKF State Estimate Results',...
     'UKF State Estimate Error',Full_Dynamics_Labels,Error_Dynamics_Labels)
 
+%% Question 6
 
+%LKF with nominal measurements
+[x_LKF_log, y_LKF_log, P_LKF_log, innov_LKF_log, delta_x_LKF_log, Sv_LKF_log] = LKF(Fk, G, Hk, Q_LKF, R, Omegabar, delta_x0, Pp0, x_nom, u_nom, u, y_nom_log, ydatalog_mod);
+LKF_outputs_log = [y_LKF_log, station_vis_datalog];
 
+%LKF Plotting
+% figure;
+% for i = 1:4
+%     subplot(4,1,i); 
+%     hold on; grid on; grid minor;
+% 
+%     xhat_i = x_LKF_log(:,i);
+%     sigma_i = sqrt(squeeze(P_LKF_log(i,i,:)));% 1σ
+% 
+%     plot(t_log, xhat_i, 'LineWidth', 1.5);
+%     plot(t_log, xhat_i + 2*sigma_i, '--', 'LineWidth', 1); % +2σ
+%     plot(t_log, xhat_i - 2*sigma_i, '--', 'LineWidth', 1); % -2σ
+% 
+%     ylabel(Full_Dynamics_Labels{i}, 'Interpreter','latex');
+% end
+% xlabel('Time [s]');
+% sgtitle('LKF State Estimates with 2\sigma Bounds');
+
+t_log = t;                  % time vector
+xhat  = x_LKF_log;          % state estimates
+Plog  = P_LKF_log;          % covariance logs
+figure;
+
+for i = 1:4
+    
+    subplot(4,2,2*i-1);
+    hold on; 
+    grid on; 
+    grid minor;
+
+    xhat_i  = x_LKF_log(:,i);
+    sigma_i = sqrt(squeeze(P_LKF_log(i,i,:)));
+
+    % Plot estimate + ±2σ
+    p1 = plot(t, xhat_i, 'b', 'LineWidth', 1.4);
+    p2 = plot(t, xhat_i + 2*sigma_i, 'r--', 'LineWidth', 1);
+    p3 = plot(t, xhat_i - 2*sigma_i, 'r--', 'LineWidth', 1);
+
+    ylabel(Full_Dynamics_Labels{i}, 'Interpreter','latex');
+
+    % Add legend (only once per column)
+    if i == 1
+        legend([p1 p2], {'Estimate', '±2σ'}, 'Location','best');
+    end
+
+    title(sprintf('State %d: 2σ Envelope', i));
+
+    subplot(4,2,2*i);
+    hold on; 
+    grid on; 
+    grid minor;
+
+    % Plot estimate + ±100σ
+    p4 = plot(t, xhat_i, 'b', 'LineWidth', 1.4);
+    p5 = plot(t, xhat_i + 100*sigma_i, 'm--', 'LineWidth', 1.2);
+    p6 = plot(t, xhat_i - 100*sigma_i, 'm--', 'LineWidth', 1.2);
+
+    ylabel(Full_Dynamics_Labels{i}, 'Interpreter','latex');
+
+    if i == 1
+        legend([p4 p5], {'Estimate', '±100σ'}, 'Location','best');
+    end
+
+    title(sprintf('State %d: 100σ (scaled) Envelope', i));
+end
+
+xlabel('Time [s]');
+sgtitle('LKF State Estimates: 2σ and Scaled 100σ Envelopes');

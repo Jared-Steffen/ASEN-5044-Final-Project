@@ -38,7 +38,7 @@ u = zeros(2,length(tspan));
 
 %% KF Tuning Knob
 % LKF
-Q_LKF = 80*Qtrue;
+Q_LKF = 10000*Qtrue;
 
 % EKF
 Q_EKF = 80*Qtrue;
@@ -227,44 +227,44 @@ xlim([1,N]);
 plot(1:N,r1_NIS,'--',"Color","red");
 plot(1:N,r2_NIS,'--',"Color","red");
 
-epsilonbar_x_EKF = (1/num_sims) .* sum(epsilon_x_EKF,2);
-epsilonbar_y_EKF = (1/num_sims) .* sum(epsilon_y_EKF,2);
-
-figure;
-scatter(1:N, epsilonbar_x_EKF, 16, 'filled'); grid on; hold on;
-xlabel('Time Step k');
-ylabel('$\bar{\epsilon}_x$', 'Interpreter', 'latex');
-title('EKF NEES Test Results');
-xlim([1,N]);
-yline(r1_NEES,'--',"r1","Color","red");
-yline(r2_NEES,'--',"r2","Color","red");
-
-figure;
-scatter(1:N, epsilonbar_y_EKF, 16, 'filled'); grid on; hold on;
-xlabel('Time Step k');
-ylabel('$\bar{\epsilon}_y$', 'Interpreter', 'latex');
-title('EKF NIS Test Results');
-xlim([1,N]);
-plot(1:N,r1_NIS,'--',"Color","red");
-plot(1:N,r2_NIS,'--',"Color","red");
-
-epsilonbar_x_UKF = (1/num_sims) .* sum(epsilon_x_UKF,2);
-epsilonbar_y_UKF = (1/num_sims) .* sum(epsilon_y_UKF,2);
-
-figure;
-scatter(1:N, epsilonbar_x_UKF, 16, 'filled'); grid on; hold on;
-xlabel('Time Step k');
-ylabel('$\bar{\epsilon}_x$', 'Interpreter', 'latex');
-title('UKF NEES Test Results');
-xlim([1,N]);
-yline(r1_NEES,'--',"r1","Color","red");
-yline(r2_NEES,'--',"r2","Color","red");
-
-figure;
-scatter(1:N, epsilonbar_y_UKF, 16, 'filled'); grid on; hold on;
-xlabel('Time Step k');
-ylabel('$\bar{\epsilon}_y$', 'Interpreter', 'latex');
-title('UKF NIS Test Results');
-xlim([1,N]);
-plot(1:N,r1_NIS,'--',"Color","red");
-plot(1:N,r2_NIS,'--',"Color","red");
+% epsilonbar_x_EKF = (1/num_sims) .* sum(epsilon_x_EKF,2);
+% epsilonbar_y_EKF = (1/num_sims) .* sum(epsilon_y_EKF,2);
+% 
+% figure;
+% scatter(1:N, epsilonbar_x_EKF, 16, 'filled'); grid on; hold on;
+% xlabel('Time Step k');
+% ylabel('$\bar{\epsilon}_x$', 'Interpreter', 'latex');
+% title('EKF NEES Test Results');
+% xlim([1,N]);
+% yline(r1_NEES,'--',"r1","Color","red");
+% yline(r2_NEES,'--',"r2","Color","red");
+% 
+% figure;
+% scatter(1:N, epsilonbar_y_EKF, 16, 'filled'); grid on; hold on;
+% xlabel('Time Step k');
+% ylabel('$\bar{\epsilon}_y$', 'Interpreter', 'latex');
+% title('EKF NIS Test Results');
+% xlim([1,N]);
+% plot(1:N,r1_NIS,'--',"Color","red");
+% plot(1:N,r2_NIS,'--',"Color","red");
+% 
+% epsilonbar_x_UKF = (1/num_sims) .* sum(epsilon_x_UKF,2);
+% epsilonbar_y_UKF = (1/num_sims) .* sum(epsilon_y_UKF,2);
+% 
+% figure;
+% scatter(1:N, epsilonbar_x_UKF, 16, 'filled'); grid on; hold on;
+% xlabel('Time Step k');
+% ylabel('$\bar{\epsilon}_x$', 'Interpreter', 'latex');
+% title('UKF NEES Test Results');
+% xlim([1,N]);
+% yline(r1_NEES,'--',"r1","Color","red");
+% yline(r2_NEES,'--',"r2","Color","red");
+% 
+% figure;
+% scatter(1:N, epsilonbar_y_UKF, 16, 'filled'); grid on; hold on;
+% xlabel('Time Step k');
+% ylabel('$\bar{\epsilon}_y$', 'Interpreter', 'latex');
+% title('UKF NIS Test Results');
+% xlim([1,N]);
+% plot(1:N,r1_NIS,'--',"Color","red");
+% plot(1:N,r2_NIS,'--',"Color","red");

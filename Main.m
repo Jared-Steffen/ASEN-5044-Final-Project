@@ -352,28 +352,7 @@ Plot_KFState_Results(t,x_pert,x_UKF',UKF_state_err,P_UKF,'UKF State Estimate Res
 LKF_outputs_log = [y_LKF_log, station_vis_datalog];
 
 %LKF Plotting
-% figure;
-% for i = 1:4
-%     subplot(4,1,i); 
-%     hold on; grid on; grid minor;
-% 
-%     xhat_i = x_LKF_log(:,i);
-%     sigma_i = sqrt(squeeze(P_LKF_log(i,i,:)));% 1σ
-% 
-%     plot(t_log, xhat_i, 'LineWidth', 1.5);
-%     plot(t_log, xhat_i + 2*sigma_i, '--', 'LineWidth', 1); % +2σ
-%     plot(t_log, xhat_i - 2*sigma_i, '--', 'LineWidth', 1); % -2σ
-% 
-%     ylabel(Full_Dynamics_Labels{i}, 'Interpreter','latex');
-% end
-% xlabel('Time [s]');
-% sgtitle('LKF State Estimates with 2\sigma Bounds');
-
-t_log = t;                  % time vector
-xhat  = x_LKF_log;          % state estimates
-Plog  = P_LKF_log;          % covariance logs
 figure;
-
 for i = 1:4
     
     subplot(4,2,2*i-1);

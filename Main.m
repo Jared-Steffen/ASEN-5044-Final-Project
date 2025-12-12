@@ -184,7 +184,7 @@ u = zeros(2,length(tspan));
 
 %% Tuning Knobs
 Q_LKF = 10000*Qtrue;
-Q_EKF = 1*Qtrue;
+Q_EKF = 0.9*Qtrue;
 Q_UKF = 1*Qtrue;
 alpha = 1e-4;
 beta = 2;
@@ -398,3 +398,39 @@ end
 
 xlabel('Time [s]');
 sgtitle('LKF State Estimates: 2σ and Scaled 100σ Envelopes');
+
+
+%EKF with nominal measurements
+Pp0_EKF = diag([1.35 1.35e-3 1.35 1.35e-3]);
+[x_EKF_log, P_EKF_log, y_EKF_log, Sv_EKF_log] = ...
+    EKF(Q_EKF, R, ydatalog_mod, t, mu, RE, wE, nom_var0, Pp0_EKF, station_vis);
+
+EKF_outputs_log = [y_EKF_log, station_vis_datalog];
+
+%EKF Plotting
+figure;
+for i = 1:4
+    subplot(4,1,i);
+    hold on; 
+    grid on; 
+    grid minor;
+
+    xhat_i  = x_EKF_log(i,:);
+    sigma_i = sqrt(squeeze(P_EKF_log(i,i,:)))';
+
+    % Plot estimate + ±2σ
+    p1 = plot(t, xhat_i, 'b', 'LineWidth', 1.4);
+    p2 = plot(t, xhat_i + 2*sigma_i, 'r--', 'LineWidth', 1);
+    p3 = plot(t, xhat_i - 2*sigma_i, 'r--', 'LineWidth', 1);
+
+    ylabel(Full_Dynamics_Labels{i}, 'Interpreter','latex');
+
+    % Add legend
+    if i == 1
+        legend([p1,p2], {'Estimate', '±2σ'}, 'Location','best');
+    end
+    title(sprintf('State %d: 2σ Envelope', i));
+end
+
+xlabel('Time [s]');
+sgtitle('EKF State Estimates and ±2σ Envelopes');
